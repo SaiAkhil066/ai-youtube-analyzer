@@ -22,7 +22,7 @@ button,select,input{font:600 14px Inter;border-radius:10px;border:1px solid var(
 button{cursor:pointer}button.primary{background:var(--lime);color:#0a0a0a;border-color:var(--lime)}
 button.pink{background:var(--pink);border-color:var(--pink);color:#fff}
 button:disabled{opacity:.5;cursor:wait}
-.grid{display:grid;gap:16px}
+.grid{display:grid;gap:16px}.grid>*{min-width:0}/* charts and tables may shrink inside the grid (else the page overflows) */
 .kpis{grid-template-columns:repeat(5,1fr)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;backdrop-filter:blur(6px);min-width:0}
 .card h3{margin:0 0 12px;font:800 13px/1 'JetBrains Mono';letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
@@ -243,8 +243,9 @@ function checks(){
     `<div class="chk"><span class="dot ${c.level}"></span><div><div class="who">${esc(c.video)}</div>${esc(c.text)}</div></div>`).join("");
 }
 
+const fontsReady = document.fonts ? document.fonts.ready.catch(() => {}) : Promise.resolve();  // charts measure labels: wait for the web fonts
 async function load(){
-  const r = await fetch("/api/facts"); F = await r.json();
+  const r = await fetch("/api/facts"); F = await r.json(); await fontsReady;
   if (F.error) { $("#through").textContent = F.error; return; }
   kpis(); daily(); lvs(); table(); traffic(); checks();
   const firstWithData = F.videos.filter(v => v.type === "Long" && v.retention_curve.length).pop() || F.videos.find(v => v.retention_curve.length);
@@ -330,26 +331,34 @@ function hourly(id){
   const best = v.hourly.reduce((a,b) => b[1] > a[1] ? b : a);
   $("#hnote").textContent = `Best hour so far: ${fmt(best[1])} views/hour (${new Date(best[0]).toLocaleString(undefined,{weekday:"short",hour:"numeric",minute:"2-digit"})}).`;
 }
+const RACE_NEW = 5, RACE_HOURS = 96;  // more lines/columns than this don't fit on one screen
+function raceSet(){  // the newest videos of this type + the best one as the benchmark
+  const all = LV.videos.filter(v => v.type === raceKind && v.race.length);  // newest first
+  const pick = all.slice(0, RACE_NEW);
+  const best = all.reduce((a, b) => (b.views || 0) > (a ? a.views || 0 : -1) ? b : a, null);
+  if (best && !pick.includes(best)) pick.push(best);
+  return pick;
+}
 function race(){
   raceC && raceC.destroy();
-  const vids = LV.videos.filter(v => v.type === raceKind && v.race.length);
-  raceC = new Chart($("#race"), {type:"line", data:{datasets:vids.map((v,i) => { const c = PAL[i % PAL.length]; return {label:v.title.slice(0,34),
+  const vids = raceSet();  // the chart leaves the benchmark out: one big hit would flatten the new videos' lines
+  raceC = new Chart($("#race"), {type:"line", data:{datasets:vids.slice(0, RACE_NEW).map((v,i) => { const c = PAL[i % PAL.length]; return {label:v.title.slice(0,34),
       data:v.race.map(p => ({x:p[0], y:p[1]})), borderColor:c, backgroundColor:c, borderWidth:3, tension:0,
       segment:{borderDash:s => s.p1.parsed.x - s.p0.parsed.x > 6 ? [6, 6] : undefined, borderColor:s => s.p1.parsed.x - s.p0.parsed.x > 6 ? c + "88" : c},
       pointRadius:v.race.map(p => p[2] === "live" ? 3 : 5), pointBorderWidth:2, pointBackgroundColor:v.race.map(p => p[2] === "live" ? c : "#07070b")}; })},
     options:{maintainAspectRatio:false, parsing:false, layout:{padding:{left:8}}, plugins:{legend:{position:"bottom", labels:{boxWidth:10, font:{size:11}}},
       tooltip:{callbacks:{title:i => `${Math.round(i[0].parsed.x)} h after upload`, label:i => `${i.dataset.label}: ${fmt(i.parsed.y)} views`}}},
-      scales:{x:{type:"linear", min:0, title:{display:true, text:"hours since upload"}}, y:{beginAtZero:true}}}});
+      scales:{x:{type:"linear", min:0, max:RACE_HOURS, title:{display:true, text:"hours since upload (first 4 days)"}}, y:{beginAtZero:true}}}});
   const marks = [6, 24, 48, 72];
   const rows = marks.map(h => { const vals = vids.map(v => viewsAt(v, h)); const got = vals.filter(Boolean);
     const mx = got.length > 1 ? Math.max(...got.map(x => x.v)) : -1;
     return `<tr><td class="mut">${h} h</td>${vals.map(x => x == null ? '<td class="num mut">–</td>'
       : `<td class="num ${x.v === mx ? "win" : ""}">${fmt(x.v)}${Math.abs(x.at - h) > 0.5 ? ` <span class="mut" style="font-size:11px">@${Math.round(x.at)}h</span>` : ""}</td>`).join("")}</tr>`; });
-  $("#h2h").innerHTML = vids.length ? `<table class="h2h"><tr><th></th>${vids.map((v,i) => `<th style="color:${PAL[i % PAL.length]}">${esc(v.title.split(/[:?!.—–]/)[0].slice(0,18))}</th>`).join("")}</tr>${rows.join("")}</table>
-    <div class="note">Real counts measured at that age (@25h = nearest measurement). – = not measured. Dashed line = a gap with no measurements in between. Lime = leader.</div>` : '<div class="mut">No data yet.</div>';
+  $("#h2h").innerHTML = vids.length ? `<div style="overflow-x:auto"><table class="h2h"><tr><th></th>${vids.map((v,i) => `<th style="color:${PAL[i % PAL.length]}">${esc(v.title.split(/[:?!.—–]/)[0].slice(0,18))}</th>`).join("")}</tr>${rows.join("")}</table></div>
+    <div class="note">Your ${RACE_NEW} newest + your best video as the benchmark. Real counts measured at that age (@25h = nearest measurement). – = not measured. Dashed line = a gap with no measurements in between. Lime = leader.</div>` : '<div class="mut">No data yet.</div>';
 }
 async function loadLive(snap){
-  LV = await (await fetch("/api/live" + (snap ? "?snap=1" : ""))).json();
+  LV = await (await fetch("/api/live" + (snap ? "?snap=1" : ""))).json(); await fontsReady;
   liveTable(); race(); hourly(selLive || (LV.videos.find(v => v.hourly.length) || LV.videos[0] || {}).id);
 }
 document.querySelectorAll(".seg").forEach(b => b.onclick = () => { document.querySelectorAll(".seg").forEach(x => x.classList.toggle("on", x === b)); raceKind = b.dataset.k; race(); });
