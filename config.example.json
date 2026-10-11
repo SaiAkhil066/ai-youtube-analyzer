@@ -8,6 +8,6 @@
   "keys_dir": "keys",
   "videos_dir": "my_videos",
   "video_patterns": ["*.mp4"],
-  "model": "qwen3:8b",
+  "model": "qwen2.5vl:7b",
   "brand": "MY"
 }

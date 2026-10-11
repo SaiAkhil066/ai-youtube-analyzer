@@ -8,7 +8,7 @@ No subscription, no paid API, and your data never leaves your computer.
 
 - **Analytics:** views, watch time, retention graphs, traffic sources, search terms, audience and devices, from Google's free YouTube APIs
 - **Live tracker:** saves view, like and comment counts every hour, with a "launch race" chart comparing your videos hour by hour
-- **AI coach:** a local model (Ollama, `qwen3:8b`) gives a score, what's working, the problems and 5 fixes
+- **AI coach:** a local model (Ollama, `qwen2.5vl:7b` by default) gives a score, what's working, the problems and 5 fixes
 - **Ask box:** ask anything about your channel; the answers use your retention drops and what you said at those moments
 - **Fact-checker:** every number the AI writes is checked against your real data. Green means verified, red means made up
 
@@ -38,7 +38,7 @@ what counts as good or bad.
 - A Windows PC (Mac/Linux also works, see the end)
 - Python 3.10 or newer: [python.org/downloads](https://www.python.org/downloads/) (tick **"Add python.exe to PATH"** during the install)
 - A Google account that owns a YouTube channel
-- About 6 GB of free disk space for the AI model. A graphics card helps: one analysis takes about 2 minutes on a GTX 1650 laptop GPU
+- About 7 GB of free disk space for the AI model, and 16 GB of RAM
 
 ## Setup (about 15 minutes, one time)
 
@@ -64,8 +64,9 @@ an empty `keys` folder.
 
 ### 4. Install the local AI
 1. Install Ollama from [ollama.com](https://ollama.com/download).
-2. Open a terminal and run `ollama pull qwen3:8b` (about 5 GB).
-   No graphics card? Use `ollama pull qwen3:4b` (about 2.5 GB) and set `"model": "qwen3:4b"` in `config.json`.
+2. Open a terminal and run `ollama pull qwen2.5vl:7b` (about 6 GB).
+   Want something lighter? `ollama pull qwen2.5vl:3b` (about 3.2 GB), then set `"model": "qwen2.5vl:3b"` in `config.json`.
+   Any other Ollama model works too; pick it in the dashboard's dropdown.
 
 ### 5. Tell the AI about your channel
 Open `config.json` in Notepad:
@@ -77,6 +78,7 @@ Open `config.json` in Notepad:
 | `creator_notes` | Your own rules for the AI, e.g. "Keep the greeting at the start". |
 | `track_since` | `YYYY-MM-DD`. Only uploads from this day on are analysed. Empty = the last 90 days. |
 | `model` | The Ollama model selected by default. |
+| `num_ctx` | How much the model reads at once (default 16384 tokens). Raise it if you analyse a lot of videos. |
 | `brand` | The word in the dashboard logo ("MY ANALYTICS."). |
 | `keys_dir`, `videos_dir`, `video_patterns` | Where your login file and your video files are (you can usually leave these). |
 
@@ -87,7 +89,13 @@ Double-click **`Open Dashboard.bat`**. It opens http://127.0.0.1:8765 in your br
 2. You'll see *"Google hasn't verified this app"*. That's normal, because it's your own app: click **Continue**,
    tick both permissions and click **Continue**.
 3. When you see *"The authentication flow has completed"*, go back to the dashboard. Your numbers are loaded.
-4. Start Ollama, choose a model, and click **Analyse my channel**.
+4. Start Ollama. The AI Coach shows *"reading your numbers once…"*: the model reads all your data one time in the
+   background. When it says **ready**, click **Analyse my channel** or ask a question.
+
+**How fast is it?** Measured on a laptop with a GTX 1650 (4 GB). Ollama runs `qwen2.5vl:7b` on the processor there:
+the first read after you open the dashboard takes about 7 minutes, and then each answer takes about 1.5–2 minutes.
+The model stays loaded for 30 minutes between questions. Switching the "Demo: raw data" box on or off makes it read
+again once.
 
 ### 7. Optional extras
 - **Hourly live tracker:** double-click `install_hourly_tracker.bat` once. Windows then saves your view counts every
@@ -111,7 +119,8 @@ Ollama and Python are free too.
 - The API doesn't give thumbnail CTR, impressions or Shorts "viewed vs swiped away". Those stay in YouTube Studio.
 - While your Google app is in "Testing" mode, the login lasts about 7 days. When the dashboard says the login
   expired, click **Refresh data** and allow it again.
-- A local 8B model can still be wrong about opinions. The fact-checker only catches wrong numbers.
+- A local 7B model can still be wrong about opinions, and it sometimes gives generic tips. The fact-checker only
+  catches wrong numbers.
 
 ## Safety
 

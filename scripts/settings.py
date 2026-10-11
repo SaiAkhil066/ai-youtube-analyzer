@@ -14,7 +14,8 @@ DEFAULTS = {
     "keys_dir": "keys",              # folder with client_secret.json (+ token.json after the first login)
     "videos_dir": "my_videos",       # your final video files, only needed for transcripts (optional)
     "video_patterns": ["*.mp4"],
-    "model": "qwen3:8b",             # default Ollama model in the dropdown
+    "model": "qwen2.5vl:7b",         # default Ollama model in the dropdown
+    "num_ctx": 16384,                # how many tokens the model reads at once; the fact sheet grows with every upload
     "ollama_url": "http://127.0.0.1:11434",
     "brand": "MY",                   # dashboard logo: "<brand> ANALYTICS."
     "port": 8765,

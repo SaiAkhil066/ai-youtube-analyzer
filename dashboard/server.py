@@ -5,8 +5,9 @@
   /api/refresh      re-pulls YouTube Analytics (yt_analytics.py), then returns fresh facts
   /api/coach?model= streams the local Ollama model's analysis of those facts (cached per report day)
   /api/ask (POST)   free question about the channel, answered from the same facts
+  /api/warm?model=  makes the model read the facts once, so the next answers only have to write
 """
-import datetime as dt, glob, json, os, re, subprocess, sys, urllib.request, webbrowser
+import datetime as dt, glob, json, os, re, subprocess, sys, time, urllib.request, webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
@@ -187,7 +188,8 @@ One line: "X/10 - reason".
 ## Fix for the next video
 5 numbered, concrete actions (hook, edit, title/thumbnail, Shorts, posting).
 ## Check next time
-2 bullets: what to look at when fresh data arrives."""
+2 bullets: what to look at when fresh data arrives.
+Keep the whole answer under 250 words."""
 
 
 def pt_offset(d):
@@ -260,11 +262,11 @@ def match_transcript(v, trs, channel=""):
     return scored[0][1]
 
 
-def said_between(tr, a, b):
+def said_between(tr, a, b, chars=140):
     if not tr:
         return ""
     txt = " ".join(s[2] for s in tr["segments"] if s[1] > a and s[0] < b)
-    return txt[:220]
+    return txt[:chars]
 
 
 def mmss(s):
@@ -299,11 +301,20 @@ GUARD_RAILS = [l for l in SYSTEM.splitlines() if l.startswith(("- Copy numbers",
 SYSTEM_RAW = "\n".join(l for l in SYSTEM.splitlines() if l not in GUARD_RAILS)
 
 
-def raw_facts(f):
-    """v1 input: the raw numbers as JSON (retention curves left out, as in v1)"""
+def raw_facts(f, last=None):
+    """v1 input: the raw numbers as JSON (retention curves left out, as in v1); last=N keeps only the N newest videos"""
     slim = {k: v for k, v in f.items() if k not in ("daily", "wins", "sheet", "coach_cached", "report_file")}
-    slim["videos"] = [{k: v for k, v in x.items() if k != "retention_curve"} for x in f["videos"]]
+    vids = f["videos"][-last:] if last else f["videos"]
+    slim["videos"] = [{k: v for k, v in x.items() if k != "retention_curve"} for x in vids]
     return json.dumps(slim, ensure_ascii=False)
+
+
+def moment_videos(f, longs=5, shorts=6):
+    """which videos get 'where viewers leave' quotes: the newest long videos + the newest Shorts that have retention data.
+    Every quote costs prompt time on a laptop GPU, and a small model reads a short list better than all of them."""
+    has = [v for v in f["videos"] if v["retention_curve"]]
+    keep = [v for v in has if v["type"] == "Long"][-longs:] + [v for v in has if v["type"] == "Short"][-shorts:]
+    return sorted(keep, key=lambda v: v["published"])
 
 
 SYSTEM_ASK = """You are a senior YouTube retention editor coaching {WHO}
@@ -327,6 +338,13 @@ PLAYBOOK (common, well-known causes of viewers leaving):
 - Title/thumbnail promising something the video does not deliver early causes early drops.
 - Rules of thumb: long videos aim for 70%+ still watching at 0:30 and 40%+ average viewed; Shorts aim for 70%+ average viewed, hook in the first 1-2 s, no intro, loop the ending.
 - Early views from friends/WhatsApp links behave differently from strangers; judge with recommended/suggested traffic when it arrives."""
+
+
+def facts_message(f, raw=False):
+    """the FACTS go first and are identical for the coach and the Ask box: Ollama keeps what it has already read,
+    so after one read (slow on a laptop) every next answer only has to write. The instructions come after it."""
+    facts = raw_facts(f, last=12) if raw else facts_for_llm(f)
+    return {"role": "system", "content": f"Channel data for {who(f['channel']['name'])}\n\nFACTS:\n{facts}"}
 
 
 def system(template, channel):
@@ -367,20 +385,18 @@ def facts_for_llm(f):
         L.append(s + ".")
     trs = load_transcripts()
     moments = []
-    for v in f["videos"]:
-        if not v["retention_curve"]:
-            continue
+    for v in moment_videos(f):
         tr = match_transcript(v, trs, c["name"])
         t = re.sub(r"#\S+", "", v["title"]).strip()[:60]
         if tr:
             hook_end = 10 if v["type"] == "Long" else 4
             moments.append(f"- \"{t}\" first {hook_end} seconds {CFG['creator']} says: \"{said_between(tr, 0, hook_end)}\"")
-        for d in drop_points(v, tr):
+        for d in drop_points(v, tr, n=3 if v["type"] == "Long" else 1):
             moments.append(f"- \"{t}\" {mmss(d['from_s'])}-{mmss(d['to_s'])}: audience fell from {d['from_pct']:.0f}% to {d['to_pct']:.0f}%"
                            + (f"; there {CFG['creator']} says: \"{d['said']}\"" if d["said"] else ""))
     if moments:
         L.append("")
-        L.append("WHERE VIEWERS LEAVE (steepest drops in each retention graph, with what was said at that moment):")
+        L.append("WHERE VIEWERS LEAVE (steepest drops in the newest retention graphs, with what was said at that moment):")
         L += moments
     L.append("")
     L.append("WINS (use these for What's working):")
@@ -392,12 +408,13 @@ def facts_for_llm(f):
     return "\n".join(L)
 
 
-def ollama_stream(model, messages, out):
+def ollama_stream(model, messages, out, max_tokens=1000):
     body = json.dumps({"model": model, "messages": messages, "stream": True, "think": False,
-                       "options": {"temperature": 0.4, "num_ctx": 8192}}).encode()
+                       "keep_alive": "30m",  # stay loaded between questions (loading takes ~1 min on a laptop)
+                       "options": {"temperature": 0.4, "num_ctx": int(CFG["num_ctx"]), "num_predict": max_tokens}}).encode()
     req = urllib.request.Request(OLLAMA + "/api/chat", body, {"Content-Type": "application/json"})
     text = []
-    with urllib.request.urlopen(req, timeout=600) as r:
+    with urllib.request.urlopen(req, timeout=1200) as r:  # a laptop GPU can take minutes before the first word
         for line in r:
             if not line.strip():
                 continue
@@ -474,6 +491,17 @@ class H(BaseHTTPRequestHandler):
             r = subprocess.run([PY, os.path.join(SCRIPTS, "yt_analytics.py")], capture_output=True, text=True, encoding="utf-8", cwd=ROOT)
             live_tracker.snap()
             return self.send(200 if r.returncode == 0 else 500, json.dumps({"ok": r.returncode == 0, "log": (r.stdout + r.stderr)[-1500:]}))
+        if u.path == "/api/warm":
+            path, rep = latest_report()
+            if not rep:
+                return self.send(404, json.dumps({"ok": False, "error": "no report yet"}))
+            t0 = time.time()
+            try:
+                ollama_stream(qs.get("model", [CFG["model"]])[0], [facts_message(build_facts(rep), raw=qs.get("mode") == ["raw"]),
+                                                                    {"role": "user", "content": "Reply with OK."}], lambda piece: None, max_tokens=1)
+                return self.send(200, json.dumps({"ok": True, "seconds": round(time.time() - t0)}))
+            except Exception as e:
+                return self.send(200, json.dumps({"ok": False, "error": str(e)[:200]}))
         if u.path == "/api/coach":
             path, rep = latest_report()
             model = qs.get("model", [CFG["model"]])[0]
@@ -482,11 +510,11 @@ class H(BaseHTTPRequestHandler):
             demo = qs.get("mode") == ["raw"]
             try:
                 if demo:  # DEMO for the video: the original v1 approach (raw JSON, no guard-rails) - this is what made the AI invent numbers
-                    txt = ollama_stream(model, [{"role": "system", "content": system(SYSTEM_RAW, f["channel"]["name"])},
-                                                {"role": "user", "content": "FACTS:\n" + raw_facts(f) + "\n\nWrite the analysis now."}], self.chunk)
+                    txt = ollama_stream(model, [facts_message(f, raw=True),
+                                                {"role": "user", "content": system(SYSTEM_RAW, f["channel"]["name"]) + "\n\nWrite the analysis now. Start directly with ## Score."}], self.chunk)
                     return self.stream_end()
-                txt = ollama_stream(model, [{"role": "system", "content": system(SYSTEM, f["channel"]["name"])},
-                                            {"role": "user", "content": "FACTS:\n" + facts_for_llm(f) + "\n\nWrite the analysis now."}], self.chunk)
+                txt = ollama_stream(model, [facts_message(f),
+                                            {"role": "user", "content": system(SYSTEM, f["channel"]["name"]) + "\n\nWrite the analysis now. Start directly with ## Score."}], self.chunk)
                 open(path.replace(".json", ".coach.md"), "w", encoding="utf-8").write(txt)
                 open(path.replace(".json", ".coach.sheet.txt"), "w", encoding="utf-8").write(facts_for_llm(f) + "\n" + raw_facts(f))
             except Exception as e:
@@ -503,8 +531,8 @@ class H(BaseHTTPRequestHandler):
         self.stream_start()
         try:
             ollama_stream(req.get("model", CFG["model"]), [
-                {"role": "system", "content": system(SYSTEM_ASK, f["channel"]["name"])},
-                {"role": "user", "content": "FACTS:\n" + facts_for_llm(f) + f"\n\n{CFG['creator'].upper()}'S QUESTION: " + req.get("q", "")
+                facts_message(f),
+                {"role": "user", "content": system(SYSTEM_ASK, f["channel"]["name"]) + f"\n\n{CFG['creator'].upper()}'S QUESTION: " + req.get("q", "")
                  + "\n\nAnswer this question only, in the format given."}], self.chunk)
         except Exception as e:
             self.chunk(f"\n\n**Ollama error:** {e}")

@@ -119,7 +119,7 @@ mark.unv{background:rgba(255,77,109,.25);color:#ff8fa3;border-radius:4px;padding
 
     <div class="grid">
       <div class="card coachcard">
-        <div class="ai" id="aihead"><span class="pulse"></span><h3 style="margin:0;color:var(--lime)">AI COACH</h3><span class="mut" id="aistate" style="font-size:13px"></span><div class="sp"></div>
+        <div class="ai" id="aihead"><span class="pulse"></span><h3 style="margin:0;color:var(--lime)">AI COACH</h3><span class="mut" id="aistate" style="font-size:13px"></span><span class="mut" id="warm" style="font-size:12px"></span><div class="sp"></div>
           <label class="demo" title="For the video: the AI reads raw data with no guard-rails (how v1 worked). Not saved."><input type="checkbox" id="demo"> Demo: raw data</label>
           <button class="primary" id="runcoach">Analyse my channel</button></div>
         <div id="coach" class="mut">Press <b>Analyse my channel</b> — your local model reads the numbers and tells you what's working, what's not, and what to fix.</div>
@@ -261,6 +261,20 @@ async function models(){
   $("#model").innerHTML = m.length ? m.map(x => `<option>${x}</option>`).join("") : "<option>Ollama not running</option>";
 }
 
+// warm-up: the model reads your numbers once in the background; after that, answers only have to write
+let warmT = 0;
+async function warm(){
+  const m = $("#model").value, raw = $("#demo").checked, my = ++warmT;
+  if (!m || m.startsWith("Ollama")) return;
+  $("#warm").textContent = ` · ${m} is reading your numbers once (a few minutes the first time on a laptop)…`;
+  const t0 = Date.now();
+  try {
+    const r = await (await fetch(`/api/warm?model=${encodeURIComponent(m)}${raw ? "&mode=raw" : ""}`)).json();
+    if (my === warmT) $("#warm").textContent = r.ok ? ` · ready (read in ${Math.round((Date.now() - t0) / 1000)} s)` : ` · warm-up failed: ${r.error}`;
+  } catch (e) { if (my === warmT) $("#warm").textContent = " · warm-up failed"; }
+}
+$("#model").onchange = warm; $("#demo").onchange = warm;
+
 $("#runcoach").onclick = async () => {
   const b = $("#runcoach"); b.disabled = true; $("#aihead").classList.add("thinking");
   $("#aistate").textContent = `${$("#model").value} is reading your numbers…`; $("#coach").classList.remove("mut"); $("#coach").innerHTML = ""; $("#fcheck").innerHTML = "";
@@ -342,7 +356,7 @@ document.querySelectorAll(".seg").forEach(b => b.onclick = () => { document.quer
 $("#snapnow").onclick = async () => { const b = $("#snapnow"); b.disabled = true; b.textContent = "Checking…"; await loadLive(true); b.disabled = false; b.textContent = "Check now"; };
 setInterval(() => loadLive(false), 5 * 60 * 1000);
 
-models(); load(); loadLive(false);
+models().then(warm); load(); loadLive(false);
 </script>
 </body>
 </html>
