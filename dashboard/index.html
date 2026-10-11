@@ -178,7 +178,8 @@ function showCheck(el){
 
 function kpis(){
   const c = F.channel, p = F.period, top = [...F.videos].sort((a,b)=>b.views_now-a.views_now)[0];
-  const k = [["Subscribers", fmt(c.subscribers), "live count"],
+  const live = LV && LV.subs_series.length ? LV.subs_series[LV.subs_series.length - 1] : null;  // hourly tracker beats the report
+  const k = [["Subscribers", fmt(live ? live[1] : c.subscribers), live ? `live · checked ${ago(live[0])}` : "at the last data pull"],
              ["Views (analysed)", fmt(p.views), `${p.from} → ${p.to}`],
              ["Watch hours", p.watch_hours, "since " + p.from],
              ["New subs", "+" + p.subs_gained, "since " + p.from],
@@ -359,6 +360,7 @@ function race(){
 }
 async function loadLive(snap){
   LV = await (await fetch("/api/live" + (snap ? "?snap=1" : ""))).json(); await fontsReady;
+  if (F && !F.error) kpis();  // subscriber card follows the newest hourly snapshot
   liveTable(); race(); hourly(selLive || (LV.videos.find(v => v.hourly.length) || LV.videos[0] || {}).id);
 }
 document.querySelectorAll(".seg").forEach(b => b.onclick = () => { document.querySelectorAll(".seg").forEach(x => x.classList.toggle("on", x === b)); raceKind = b.dataset.k; race(); });
