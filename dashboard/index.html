@@ -295,10 +295,10 @@ const ask = async () => {
 };
 $("#askb").onclick = ask; $("#q").addEventListener("keydown", e => { if (e.key === "Enter") ask(); });
 $("#refresh").onclick = async () => {
-  const b = $("#refresh"); b.disabled = true; b.textContent = "Pulling from YouTube…";
+  const b = $("#refresh"); b.disabled = true; b.textContent = "Pulling from YouTube… (~1.5 min)";
   const r = await (await fetch("/api/refresh")).json();
   b.disabled = false; b.textContent = "↻ Refresh data";
-  if (!r.ok) alert("Refresh failed:\n" + r.log); else load();
+  if (!r.ok) alert("Refresh failed:\n" + r.log); else { await load(); warm(); }  // new numbers = the AI reads them once again
 };
 // ---------- live tracker ----------
 let LV = null, hourC = null, raceC = null, raceKind = "Long", selLive = null;
