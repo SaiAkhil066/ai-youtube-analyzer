@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__BRAND__ Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+:root{--lime:#d4ff00;--pink:#ff2e88;--bg:#07070b;--card:rgba(255,255,255,.045);--line:rgba(255,255,255,.09);--txt:#f2f3f5;--mut:#9aa0a8;--ok:#ffc53d;--bad:#ff4d6d;--good:#d4ff00;--info:#5ac8ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.5 Inter,system-ui,sans-serif;
+  background-image:linear-gradient(rgba(212,255,0,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(212,255,0,.035) 1px,transparent 1px);background-size:44px 44px}
+.wrap{max-width:1400px;margin:0 auto;padding:22px 20px 60px}
+header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.logo{font:800 26px/1 Inter;letter-spacing:-.02em}.logo b{color:var(--lime)}.logo i{color:var(--pink);font-style:normal}
+.badge{font:700 12px/1 'JetBrains Mono';padding:7px 10px;border:1px solid var(--line);border-radius:999px;color:var(--mut)}
+.badge.live{color:#0a0a0a;background:var(--lime);border-color:var(--lime)}
+.sp{flex:1}
+button,select,input{font:600 14px Inter;border-radius:10px;border:1px solid var(--line);background:#14151b;color:var(--txt);padding:9px 14px}
+button{cursor:pointer}button.primary{background:var(--lime);color:#0a0a0a;border-color:var(--lime)}
+button.pink{background:var(--pink);border-color:var(--pink);color:#fff}
+button:disabled{opacity:.5;cursor:wait}
+.grid{display:grid;gap:16px}
+.kpis{grid-template-columns:repeat(5,1fr)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;backdrop-filter:blur(6px);min-width:0}
+.card h3{margin:0 0 12px;font:800 13px/1 'JetBrains Mono';letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+.kpi .v{font:800 34px/1.1 Inter;letter-spacing:-.02em}.kpi .s{color:var(--mut);font-size:13px}
+.kpi:nth-child(1) .v{color:var(--lime)}.kpi:nth-child(5) .v{color:var(--pink)}
+.two{grid-template-columns:1.4fr 1fr}.main{grid-template-columns:1.25fr 1fr;align-items:start}
+.chk{display:flex;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:14px}
+.chk:first-of-type{border-top:0}
+.dot{flex:0 0 10px;height:10px;border-radius:50%;margin-top:6px}
+.dot.good{background:var(--good);box-shadow:0 0 10px var(--good)}.dot.ok{background:var(--ok)}.dot.bad{background:var(--bad);box-shadow:0 0 10px var(--bad)}
+.dot.info{background:var(--info)}.dot.wait{background:#555}
+.chk .who{color:var(--mut);font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font:700 11px 'JetBrains Mono';color:var(--mut);text-transform:uppercase;letter-spacing:.06em;padding:8px 6px;border-bottom:1px solid var(--line)}
+td{padding:9px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+tr.v{cursor:pointer}tr.v:hover td{background:rgba(212,255,0,.05)}tr.sel td{background:rgba(212,255,0,.09)}
+.tag{font:700 10px 'JetBrains Mono';padding:3px 6px;border-radius:6px;background:#22232b}.tag.Short{background:rgba(255,46,136,.18);color:var(--pink)}.tag.Long{background:rgba(212,255,0,.14);color:var(--lime)}
+.num{font-family:'JetBrains Mono';white-space:nowrap}.mut{color:var(--mut)}
+.bar{height:8px;border-radius:4px;background:#22232b;overflow:hidden;margin-top:5px}.bar span{display:block;height:100%;background:var(--lime)}
+.trow{margin:8px 0;font-size:14px}.trow .num{float:right}
+#coach{min-height:260px;font-size:15px}
+#coach h2{font:800 18px Inter;margin:18px 0 8px;color:var(--lime)}#coach h2:first-child{margin-top:0}
+#coach ul,#coach ol{padding-left:20px;margin:6px 0}#coach li{margin:5px 0}#coach strong{color:#fff}
+.coachcard{border-color:rgba(212,255,0,.35);box-shadow:0 0 0 1px rgba(212,255,0,.08),0 20px 60px rgba(212,255,0,.06)}
+.ai{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.pulse{width:10px;height:10px;border-radius:50%;background:var(--lime);box-shadow:0 0 12px var(--lime)}
+.thinking .pulse{animation:p 1s infinite}@keyframes p{50%{opacity:.25}}
+.ask{display:flex;gap:8px;margin-top:14px}.ask input{flex:1;min-width:0}
+#answer{margin-top:10px;font-size:14px}
+.vok{border-bottom:2px solid rgba(212,255,0,.55)}
+mark.unv{background:rgba(255,77,109,.25);color:#ff8fa3;border-radius:4px;padding:0 3px;border-bottom:2px solid var(--bad)}
+.demo{display:flex;align-items:center;gap:6px;font:700 12px 'JetBrains Mono';color:var(--pink);cursor:pointer;user-select:none}
+.demo input{accent-color:var(--pink);width:16px;height:16px}
+.fc{display:inline-block;margin-top:12px;font:700 12px 'JetBrains Mono';padding:6px 10px;border-radius:8px;background:rgba(212,255,0,.12);color:var(--lime)}
+.fc.bad{background:rgba(255,77,109,.15);color:#ff8fa3}
+.cv{height:240px;position:relative}
+.split{grid-template-columns:1.1fr 1fr}.split2{grid-template-columns:1.6fr 1fr}
+.livecard{border-color:rgba(255,46,136,.35)}.livedot{background:var(--pink);box-shadow:0 0 12px var(--pink);animation:p 1.6s infinite}
+.seg{padding:6px 12px;font-size:13px}.seg.on{background:var(--pink);border-color:var(--pink);color:#fff}
+.up{color:var(--lime)}.flat{color:var(--mut)}
+.h2h td{font-size:14px}.h2h .win{color:var(--lime);font-weight:800}
+@media (max-width:1000px){.split,.split2{grid-template-columns:1fr}}
+.note{font-size:12px;color:var(--mut);margin-top:8px}
+@media (max-width:1000px){.kpis{grid-template-columns:repeat(2,1fr)}.two,.main{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">__BRAND__ <b>ANALYTICS</b><i>.</i></div>
+    <span class="badge" id="through">loading…</span>
+    <span class="badge live">LOCAL AI · 100% FREE</span>
+    <div class="sp"></div>
+    <select id="model" title="Local Ollama model"></select>
+    <button id="refresh">↻ Refresh data</button>
+  </header>
+
+  <section class="grid kpis" id="kpis"></section>
+
+  <section class="card livecard" style="margin-top:16px">
+    <div class="ai"><span class="pulse livedot"></span><h3 style="margin:0;color:var(--pink)">LIVE TRACKER</h3>
+      <span class="mut" id="lstate" style="font-size:13px">loading…</span><div class="sp"></div>
+      <button id="snapnow">Check now</button></div>
+    <div class="grid split">
+      <div><table><thead><tr><th></th><th>Video</th><th>Age</th><th>Live views</th><th>Last hour</th><th>Last 24 h</th></tr></thead><tbody id="lt"></tbody></table>
+        <div class="note">Public counts, saved every hour while this PC is on. Click a video for its views per hour.</div></div>
+      <div><h3 id="htitle">Views per hour</h3><div class="cv" style="height:250px"><canvas id="hourly"></canvas></div><div class="note" id="hnote"></div></div>
+    </div>
+    <div class="grid split2" style="margin-top:18px">
+      <div><div class="ai" style="margin-bottom:6px"><h3 style="margin:0">Launch race · views vs hours since upload</h3><div class="sp"></div>
+        <button class="seg on" data-k="Long">Long videos</button><button class="seg" data-k="Short">Shorts</button></div>
+        <div class="cv" style="height:300px"><canvas id="race"></canvas></div>
+        <div class="note">Filled dots = live hourly counts · hollow dots = YouTube's official daily totals (end of each US-Pacific day).</div></div>
+      <div><h3>Head to head</h3><div id="h2h"></div></div>
+    </div>
+  </section>
+
+  <section class="grid main" style="margin-top:16px">
+    <div class="grid">
+      <div class="grid two">
+        <div class="card"><h3>Daily views &amp; new subs</h3><div class="cv"><canvas id="daily"></canvas></div></div>
+        <div class="card"><h3>Long videos vs Shorts</h3><div id="lvs"></div></div>
+      </div>
+      <div class="card"><h3>Every upload since <span id="since"></span></h3>
+        <table><thead><tr><th></th><th>Video</th><th>Live views</th><th>Avg viewed</th><th>Hook</th><th>Subs</th><th>Likes/100</th></tr></thead><tbody id="vt"></tbody></table>
+        <div class="note">Click a video to see where people leave. “Hook” = still watching at 0:30 (long) or at the end (Shorts).</div>
+      </div>
+      <div class="card"><h3 id="rtitle">Retention</h3><div class="cv" style="height:260px"><canvas id="ret"></canvas></div><div class="note" id="rnote"></div></div>
+      <div class="grid two">
+        <div class="card"><h3>Where views come from</h3><div id="traffic"></div></div>
+        <div class="card"><h3>Who watches</h3><div id="aud"></div></div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card coachcard">
+        <div class="ai" id="aihead"><span class="pulse"></span><h3 style="margin:0;color:var(--lime)">AI COACH</h3><span class="mut" id="aistate" style="font-size:13px"></span><div class="sp"></div>
+          <label class="demo" title="For the video: the AI reads raw data with no guard-rails (how v1 worked). Not saved."><input type="checkbox" id="demo"> Demo: raw data</label>
+          <button class="primary" id="runcoach">Analyse my channel</button></div>
+        <div id="coach" class="mut">Press <b>Analyse my channel</b> — your local model reads the numbers and tells you what's working, what's not, and what to fix.</div>
+        <div id="fcheck"></div>
+        <div class="ask"><input id="q" placeholder="Ask anything… e.g. why do people leave my long videos?"><button class="pink" id="askb">Ask</button></div>
+        <div id="answer"></div>
+      </div>
+      <div class="card"><h3>Health checks</h3><div id="checks"></div>
+        <div class="note">Computed in Python, not by the AI. Targets are common creator rules of thumb.</div></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = n => n == null ? "–" : Number(n).toLocaleString();
+Chart.defaults.color = "#9aa0a8"; Chart.defaults.font.family = "Inter"; Chart.defaults.borderColor = "rgba(255,255,255,.07)";
+let F = null, dailyC = null, retC = null;
+
+// fact-checker: every number the AI writes must exist in the fact sheet it was given (small numbers like 1-10 skipped)
+let ALLOWED = [], CHK = {ok:0, bad:0};
+function allowFrom(sheet){ ALLOWED = (sheet.match(/\d[\d,]*(?:\.\d+)?/g) || []).map(x => parseFloat(x.replace(/,/g, ""))); }
+function check(line){
+  return line.replace(/(?<![\w.:\/-])(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)(?![\w\/:-])/g, m => {
+    const x = parseFloat(m.replace(/,/g, "")); if (x <= 10) return m;
+    const tol = Number.isInteger(x) ? 0.5 : 0.051;
+    if (ALLOWED.some(a => Math.abs(a - x) <= tol)) { CHK.ok++; return `<span class="vok">${m}</span>`; }
+    CHK.bad++; return `<mark class="unv" title="Not in your data - the AI made this up">${m}</mark>`;
+  });
+}
+function md(t, verify){ // tiny markdown renderer: ## headings, bullets, numbered lists, **bold**
+  const out = []; let list = null; CHK = {ok:0, bad:0};
+  const close = () => { if (list) { out.push(`</${list}>`); list = null; } };
+  for (let line of esc(t).split("\n")) {
+    line = line.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+    if (verify) line = check(line);
+    let m;
+    if ((m = line.match(/^#{1,4}\s+(.*)/))) { close(); out.push(`<h2>${m[1]}</h2>`); }
+    else if ((m = line.match(/^\s*[-*•]\s+(.*)/))) { if (list !== "ul") { close(); out.push("<ul>"); list = "ul"; } out.push(`<li>${m[1]}</li>`); }
+    else if ((m = line.match(/^\s*\d+[.)]\s+(.*)/))) { if (list !== "ol") { close(); out.push("<ol>"); list = "ol"; } out.push(`<li>${m[1]}</li>`); }
+    else if (line.trim()) { close(); out.push(`<p>${line}</p>`); }
+  }
+  close(); return out.join("");
+}
+
+async function stream(url, opts, el, badge){
+  const r = await fetch(url, opts); const rd = r.body.getReader(); const dec = new TextDecoder(); let txt = "";
+  for (;;) { const {done, value} = await rd.read(); if (done) break; txt += dec.decode(value, {stream:true}); el.innerHTML = md(txt, true); }
+  el.innerHTML = md(txt, true); badge && showCheck(badge);
+}
+function showCheck(el){
+  el.innerHTML = CHK.bad ? `<span class="fc bad">⚠ ${CHK.bad} number${CHK.bad > 1 ? "s" : ""} not in your data (red) · ${CHK.ok} verified</span>`
+                         : `<span class="fc">✓ all ${CHK.ok} numbers verified against your data</span>`;
+}
+
+function kpis(){
+  const c = F.channel, p = F.period, top = [...F.videos].sort((a,b)=>b.views_now-a.views_now)[0];
+  const k = [["Subscribers", fmt(c.subscribers), "live count"],
+             ["Views (analysed)", fmt(p.views), `${p.from} → ${p.to}`],
+             ["Watch hours", p.watch_hours, "since " + p.from],
+             ["New subs", "+" + p.subs_gained, "since " + p.from],
+             ["Top video", fmt(top?.views_now), esc(top?.title.slice(0,34)) + "…"]];
+  $("#kpis").innerHTML = k.map(([h,v,s]) => `<div class="card kpi"><h3>${h}</h3><div class="v">${v}</div><div class="s">${s}</div></div>`).join("");
+  $("#through").textContent = `DATA UP TO ${c.data_through} · pulled ${c.pulled.slice(5,16).replace("T"," ")}`;
+  $("#since").textContent = p.from;
+}
+
+function daily(){
+  dailyC && dailyC.destroy();
+  dailyC = new Chart($("#daily"), {type:"bar", data:{labels:F.daily.map(d=>d[0].slice(5)),
+    datasets:[{label:"Views", data:F.daily.map(d=>d[1]), backgroundColor:"#d4ff00", borderRadius:5, yAxisID:"y"},
+              {label:"New subs", type:"line", data:F.daily.map(d=>d[2]), borderColor:"#ff2e88", backgroundColor:"#ff2e88", tension:.35, yAxisID:"y2"}]},
+    options:{maintainAspectRatio:false, plugins:{legend:{labels:{boxWidth:10}}}, scales:{y:{beginAtZero:true}, y2:{beginAtZero:true, position:"right", grid:{display:false}}}}});
+}
+
+function lvs(){
+  const L = F.long_vs_shorts.long || {}, S = F.long_vs_shorts.shorts || {};
+  const row = (lab, a, b, suf="") => `<tr><td class="mut">${lab}</td><td class="num" style="color:var(--lime)">${fmt(a)}${suf}</td><td class="num" style="color:var(--pink)">${fmt(b)}${suf}</td></tr>`;
+  $("#lvs").innerHTML = `<table><tr><th></th><th>Long</th><th>Shorts</th></tr>${row("Views",L.views,S.views)}${row("Avg viewed",L.avg_view_pct,S.avg_view_pct,"%")}
+    ${row("Avg watch",L.avg_view_s,S.avg_view_s," s")}${row("Subs gained",L.subs_gained,S.subs_gained)}${row("Likes",L.likes,S.likes)}${row("Shares",L.shares,S.shares)}</table>`;
+}
+
+function table(){
+  $("#vt").innerHTML = F.videos.slice().reverse().map((v,i) => {
+    const hook = v.type === "Long" ? (v.kept_30s_pct != null ? v.kept_30s_pct + "%" : "–") : (v.kept_at_end_pct != null ? v.kept_at_end_pct + "%" : "–");
+    return `<tr class="v" data-id="${v.id}"><td><span class="tag ${v.type}">${v.type.toUpperCase()}</span></td>
+      <td>${esc(v.title.replace(/#\S+/g,"").trim().slice(0,60))}<div class="mut" style="font-size:12px">${v.published}</div></td>
+      <td class="num">${fmt(v.views_now)}</td><td class="num">${v.avg_view_pct != null ? v.avg_view_pct + "%" : '<span class="mut">pending</span>'}</td>
+      <td class="num">${hook}</td><td class="num">${v.subs_gained ?? "–"}</td><td class="num">${v.likes_per_100 ?? "–"}</td></tr>`;}).join("");
+  document.querySelectorAll("tr.v").forEach(tr => tr.onclick = () => retention(tr.dataset.id));
+}
+
+function retention(id){
+  const v = F.videos.find(x => x.id === id); if (!v) return;
+  document.querySelectorAll("tr.v").forEach(tr => tr.classList.toggle("sel", tr.dataset.id === id));
+  $("#rtitle").textContent = "Retention · " + v.title.replace(/#\S+/g,"").trim().slice(0,60);
+  retC && retC.destroy();
+  if (!v.retention_curve.length) { $("#rnote").textContent = "No retention data yet — YouTube's analytics run 2–3 days behind."; return; }
+  const pts = v.retention_curve.map(([s,p]) => ({x:s, y:p}));
+  retC = new Chart($("#ret"), {type:"line", data:{datasets:[{label:"% still watching", data:pts, borderColor:"#d4ff00", borderWidth:3, pointRadius:0, fill:true,
+      backgroundColor:"rgba(212,255,0,.10)", tension:.25}]},
+    options:{maintainAspectRatio:false, parsing:false, plugins:{legend:{display:false}, tooltip:{callbacks:{title:i=>{const s=Math.round(i[0].parsed.x);return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`}, label:i=>`${i.parsed.y}% still watching`}}},
+      scales:{x:{type:"linear", min:0, max:v.duration_s, ticks:{callback:s=>`${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,"0")}`}}, y:{min:0, suggestedMax:100, ticks:{callback:y=>y+"%"}}}}});
+  $("#rnote").textContent = v.type === "Long"
+    ? `${100 - v.kept_10s_pct}% left in the first 10 s · half gone by ${v.half_gone_at_s ?? "—"} s · ${v.friends_share_pct}% of these views came from people who know you (links + subscribers).`
+    : `Starts at ${v.kept_at_start_pct}% · ends at ${v.kept_at_end_pct}%${v.rewatched ? " · people REWATCHED parts (curve above 100%)" : ""}.`;
+}
+
+function traffic(){
+  $("#traffic").innerHTML = F.traffic.slice(0,7).map(t => `<div class="trow">${esc(t.source)}<span class="num">${t.pct}%</span><div class="bar"><span style="width:${t.pct}%"></span></div></div>`).join("");
+  const a = F.audience;
+  $("#aud").innerHTML = a.age_gender.map(([g,s,p]) => `<div class="trow">${g} · ${s}<span class="num">${p}%</span><div class="bar"><span style="width:${p}%;background:var(--pink)"></span></div></div>`).join("")
+    + `<div class="trow">On mobile<span class="num">${a.mobile_pct}%</span><div class="bar"><span style="width:${a.mobile_pct}%"></span></div></div>`
+    + `<div class="trow mut">Top countries: ${a.countries.map(c => c[0] + " " + fmt(c[1])).join(" · ")}</div>`;
+}
+
+function checks(){
+  const order = {bad:0, ok:1, good:2, info:3, wait:4};
+  $("#checks").innerHTML = F.checks.slice().sort((a,b)=>order[a.level]-order[b.level]).map(c =>
+    `<div class="chk"><span class="dot ${c.level}"></span><div><div class="who">${esc(c.video)}</div>${esc(c.text)}</div></div>`).join("");
+}
+
+async function load(){
+  const r = await fetch("/api/facts"); F = await r.json();
+  if (F.error) { $("#through").textContent = F.error; return; }
+  kpis(); daily(); lvs(); table(); traffic(); checks();
+  const firstWithData = F.videos.filter(v => v.type === "Long" && v.retention_curve.length).pop() || F.videos.find(v => v.retention_curve.length);
+  firstWithData && retention(firstWithData.id);
+  allowFrom(F.sheet || "");
+  if (F.coach_cached) { // check a saved analysis against the numbers it was written from (live counts move every hour)
+    allowFrom(F.coach_sheet || F.sheet || "");
+    $("#coach").classList.remove("mut"); $("#coach").innerHTML = md(F.coach_cached, true); showCheck($("#fcheck"));
+    $("#aistate").textContent = "saved analysis · " + (F.coach_time || ""); allowFrom(F.sheet || ""); }
+}
+
+async function models(){
+  const m = await (await fetch("/api/models")).json();  // default model (config.json) comes first
+  $("#model").innerHTML = m.length ? m.map(x => `<option>${x}</option>`).join("") : "<option>Ollama not running</option>";
+}
+
+$("#runcoach").onclick = async () => {
+  const b = $("#runcoach"); b.disabled = true; $("#aihead").classList.add("thinking");
+  $("#aistate").textContent = `${$("#model").value} is reading your numbers…`; $("#coach").classList.remove("mut"); $("#coach").innerHTML = ""; $("#fcheck").innerHTML = "";
+  const t0 = Date.now();
+  const demo = $("#demo").checked;
+  if (demo) $("#aistate").textContent = "DEMO · reading raw data, no guard-rails…";
+  await stream("/api/coach?model=" + encodeURIComponent($("#model").value) + (demo ? "&mode=raw" : ""), {}, $("#coach"), $("#fcheck"));
+  $("#aistate").textContent = `done in ${Math.round((Date.now()-t0)/1000)} s · runs on this PC`; $("#aihead").classList.remove("thinking"); b.disabled = false;
+};
+const ask = async () => {
+  const q = $("#q").value.trim(); if (!q) return;
+  $("#askb").disabled = true; $("#answer").innerHTML = '<span class="mut">thinking…</span>';
+  await stream("/api/ask", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({q, model:$("#model").value})}, $("#answer"));
+  $("#answer").insertAdjacentHTML("beforeend", "<div></div>"); showCheck($("#answer").lastElementChild);
+  $("#askb").disabled = false;
+};
+$("#askb").onclick = ask; $("#q").addEventListener("keydown", e => { if (e.key === "Enter") ask(); });
+$("#refresh").onclick = async () => {
+  const b = $("#refresh"); b.disabled = true; b.textContent = "Pulling from YouTube…";
+  const r = await (await fetch("/api/refresh")).json();
+  b.disabled = false; b.textContent = "↻ Refresh data";
+  if (!r.ok) alert("Refresh failed:\n" + r.log); else load();
+};
+// ---------- live tracker ----------
+let LV = null, hourC = null, raceC = null, raceKind = "Long", selLive = null;
+const PAL = ["#d4ff00","#ff2e88","#5ac8ff","#ffc53d","#b18cff","#3dffb4","#ff8a3d","#ffffff","#8a8f98"];
+const ago = iso => { const m = Math.round((Date.now() - new Date(iso)) / 60000); return m < 60 ? `${m} min ago` : `${Math.floor(m/60)} h ${m%60} min ago`; };
+const ageTxt = h => h < 48 ? `${Math.round(h)} h` : `${(h/24).toFixed(1)} d`;
+const gain = g => g == null ? '<span class="mut">collecting</span>' : `<span class="${g > 0 ? "up" : "flat"}">+${fmt(g)}</span>`;
+function viewsAt(v, h){ // a REAL measurement taken within 2 h of that age (no guessing across gaps)
+  let best = null;
+  for (const p of v.race) if (Math.abs(p[0] - h) <= 2 && (!best || Math.abs(p[0] - h) < Math.abs(best[0] - h))) best = p;
+  return best ? {v: best[1], at: best[0]} : null;
+}
+function liveTable(){
+  $("#lt").innerHTML = LV.videos.map(v => `<tr class="v lv" data-id="${v.id}"><td><span class="tag ${v.type}">${v.type.toUpperCase()}</span></td>
+    <td>${esc(v.title.slice(0,52))}</td><td class="num mut">${ageTxt(v.age_h)}</td><td class="num">${fmt(v.views)}</td>
+    <td class="num">${gain(v.gain_1h)}</td><td class="num">${gain(v.gain_24h)}</td></tr>`).join("");
+  document.querySelectorAll("tr.lv").forEach(tr => tr.onclick = () => hourly(tr.dataset.id));
+  const st = LV.status;
+  $("#lstate").innerHTML = st.ok ? `${LV.snapshots} snapshot${LV.snapshots === 1 ? "" : "s"} · last ${ago(LV.last)} · runs every hour`
+                                 : `<span style="color:var(--bad)">${esc(st.msg)}</span>`;
+}
+function hourly(id){
+  selLive = id; const v = LV.videos.find(x => x.id === id); if (!v) return;
+  document.querySelectorAll("tr.lv").forEach(tr => tr.classList.toggle("sel", tr.dataset.id === id));
+  $("#htitle").textContent = "Views per hour · " + v.title.slice(0,46);
+  hourC && hourC.destroy(); hourC = null;
+  if (!v.hourly.length) { $("#hnote").textContent = "Collecting — the graph starts after the second hourly snapshot."; return; }
+  hourC = new Chart($("#hourly"), {type:"bar", data:{labels:v.hourly.map(h => new Date(h[0]).toLocaleString(undefined,{weekday:"short",hour:"numeric"})),
+    datasets:[{label:"views / hour", data:v.hourly.map(h => h[1]), backgroundColor:"#ff2e88", borderRadius:4}]},
+    options:{maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}});
+  const best = v.hourly.reduce((a,b) => b[1] > a[1] ? b : a);
+  $("#hnote").textContent = `Best hour so far: ${fmt(best[1])} views/hour (${new Date(best[0]).toLocaleString(undefined,{weekday:"short",hour:"numeric",minute:"2-digit"})}).`;
+}
+function race(){
+  raceC && raceC.destroy();
+  const vids = LV.videos.filter(v => v.type === raceKind && v.race.length);
+  raceC = new Chart($("#race"), {type:"line", data:{datasets:vids.map((v,i) => { const c = PAL[i % PAL.length]; return {label:v.title.slice(0,34),
+      data:v.race.map(p => ({x:p[0], y:p[1]})), borderColor:c, backgroundColor:c, borderWidth:3, tension:0,
+      segment:{borderDash:s => s.p1.parsed.x - s.p0.parsed.x > 6 ? [6, 6] : undefined, borderColor:s => s.p1.parsed.x - s.p0.parsed.x > 6 ? c + "88" : c},
+      pointRadius:v.race.map(p => p[2] === "live" ? 3 : 5), pointBorderWidth:2, pointBackgroundColor:v.race.map(p => p[2] === "live" ? c : "#07070b")}; })},
+    options:{maintainAspectRatio:false, parsing:false, layout:{padding:{left:8}}, plugins:{legend:{position:"bottom", labels:{boxWidth:10, font:{size:11}}},
+      tooltip:{callbacks:{title:i => `${Math.round(i[0].parsed.x)} h after upload`, label:i => `${i.dataset.label}: ${fmt(i.parsed.y)} views`}}},
+      scales:{x:{type:"linear", min:0, title:{display:true, text:"hours since upload"}}, y:{beginAtZero:true}}}});
+  const marks = [6, 24, 48, 72];
+  const rows = marks.map(h => { const vals = vids.map(v => viewsAt(v, h)); const got = vals.filter(Boolean);
+    const mx = got.length > 1 ? Math.max(...got.map(x => x.v)) : -1;
+    return `<tr><td class="mut">${h} h</td>${vals.map(x => x == null ? '<td class="num mut">–</td>'
+      : `<td class="num ${x.v === mx ? "win" : ""}">${fmt(x.v)}${Math.abs(x.at - h) > 0.5 ? ` <span class="mut" style="font-size:11px">@${Math.round(x.at)}h</span>` : ""}</td>`).join("")}</tr>`; });
+  $("#h2h").innerHTML = vids.length ? `<table class="h2h"><tr><th></th>${vids.map((v,i) => `<th style="color:${PAL[i % PAL.length]}">${esc(v.title.split(/[:?!.—–]/)[0].slice(0,18))}</th>`).join("")}</tr>${rows.join("")}</table>
+    <div class="note">Real counts measured at that age (@25h = nearest measurement). – = not measured. Dashed line = a gap with no measurements in between. Lime = leader.</div>` : '<div class="mut">No data yet.</div>';
+}
+async function loadLive(snap){
+  LV = await (await fetch("/api/live" + (snap ? "?snap=1" : ""))).json();
+  liveTable(); race(); hourly(selLive || (LV.videos.find(v => v.hourly.length) || LV.videos[0] || {}).id);
+}
+document.querySelectorAll(".seg").forEach(b => b.onclick = () => { document.querySelectorAll(".seg").forEach(x => x.classList.toggle("on", x === b)); raceKind = b.dataset.k; race(); });
+$("#snapnow").onclick = async () => { const b = $("#snapnow"); b.disabled = true; b.textContent = "Checking…"; await loadLive(true); b.disabled = false; b.textContent = "Check now"; };
+setInterval(() => loadLive(false), 5 * 60 * 1000);
+
+models(); load(); loadLive(false);
+</script>
+</body>
+</html>

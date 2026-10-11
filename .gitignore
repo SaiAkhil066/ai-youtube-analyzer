@@ -1,0 +1,14 @@
+# Private - never commit these
+config.json
+keys/
+client_secret*.json
+token.json
+
+# Your channel's data (stays on your PC)
+data/
+my_videos/
+
+# Python
+.venv/
+__pycache__/
+*.pyc

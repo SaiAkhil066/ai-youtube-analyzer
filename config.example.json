@@ -1,0 +1,13 @@
+{
+  "creator": "Your name",
+  "channel_about": "The channel makes tech explainers in English (long videos ~8 min plus Shorts).",
+  "creator_notes": [
+    "Keep the channel greeting at the start of every video."
+  ],
+  "track_since": "",
+  "keys_dir": "keys",
+  "videos_dir": "my_videos",
+  "video_patterns": ["*.mp4"],
+  "model": "qwen3:8b",
+  "brand": "MY"
+}
