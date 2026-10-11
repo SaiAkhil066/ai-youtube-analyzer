@@ -247,11 +247,12 @@ def load_transcripts():
 
 def match_transcript(v, trs, channel=""):
     """local final file <-> YouTube video: same duration (±1.5 s); Shorts also need a shared title word (many are ~47 s)"""
-    stems = lambda s: {w[:5] for w in re.findall(r"[a-z]{4,}", s.lower())}
-    skip = {"short", "final"} | stems(channel)  # the channel's own name is in every file name
-    words = lambda s: stems(s) - skip
+    stems = lambda s: {w[:5] for w in re.findall(r"[a-z0-9]+", s.lower()) if len(w) >= 3 or (w.isdigit() and len(w) >= 2)}
+    skip = stems("short final youtube video videos the and for you your with how why what this that are not") | stems(channel)
+    words = lambda s: stems(s) - skip  # generic words + the channel's own name would match every file
     cands = [t for t in trs if abs(t["duration"] - v["duration_s"]) <= 1.5]
-    scored = sorted(((len(words(t["file"]) & words(v["title"])), t) for t in cands), key=lambda x: -x[0])
+    scored = sorted(((len(words(t["file"]) & words(v["title"])), t) for t in cands),
+                    key=lambda x: (-x[0], abs(x[1]["duration"] - v["duration_s"])))
     if not scored:
         return None
     if v["type"] == "Short" and scored[0][0] == 0:
